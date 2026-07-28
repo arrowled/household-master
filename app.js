@@ -1007,32 +1007,7 @@ const startDate = localStartDate.toISOString();
       }
     });
   },
-startListening() {
-  const input = $("aiCalendarCommand");
-  const micButton = $("aiCalendarMicBtn");
-  const status = $("aiCalendarStatus");
 
-  const SpeechRecognition =
-    window.SpeechRecognition ||
-    window.webkitSpeechRecognition;
-
-  if (!SpeechRecognition) {
-    status.textContent =
-      "Voice input is not supported by this browser.";
-    return;
-  }
-
-  const recognition = new SpeechRecognition();
-
-  recognition.lang = "en-US";
-  recognition.continuous = false;
-  recognition.interimResults = false;
-
-  recognition.onstart = () => {
-    micButton.disabled = true;
-    micButton.textContent = "🎤 Listening...";
-    status.textContent = "Speak your calendar command.";
-  };
 
   recognition.onresult = event => {
     const spokenText =
@@ -1850,28 +1825,90 @@ const micButton = $("aiCalendarMicBtn");
       button.textContent = "✨ Create";
     }
   },
+startListening() {
+  const input = $("aiCalendarCommand");
+  const micButton = $("aiCalendarMicBtn");
+  const status = $("aiCalendarStatus");
 
-  initialize() {
-    const input = $("aiCalendarCommand");
-    const button = $("aiCalendarCreateBtn");
-const micButton = $("aiCalendarMicBtn");
-    if (!input || !button) return;
-if (micButton) {
-  micButton.addEventListener("click", () => {
-    this.startListening();
-  });
-}
-    button.addEventListener("click", () => {
-      this.createEvent();
-    });
+  const SpeechRecognition =
+    window.SpeechRecognition ||
+    window.webkitSpeechRecognition;
 
-    input.addEventListener("keydown", event => {
-      if (event.key === "Enter") {
-        event.preventDefault();
-        this.createEvent();
-      }
+  if (!SpeechRecognition) {
+    status.textContent =
+      "Voice input is not supported by this browser.";
+    return;
+  }
+
+  const recognition = new SpeechRecognition();
+
+  recognition.lang = "en-US";
+  recognition.continuous = false;
+  recognition.interimResults = false;
+
+  recognition.onstart = () => {
+    micButton.disabled = true;
+    micButton.textContent = "🎤 Listening...";
+    status.textContent = "Speak your calendar command.";
+  };
+
+  recognition.onresult = event => {
+    const spokenText =
+      event.results[0][0].transcript.trim();
+
+    input.value = spokenText;
+    status.textContent = `Heard: ${spokenText}`;
+  };
+
+  recognition.onerror = event => {
+    console.error(
+      "Speech recognition error:",
+      event.error
+    );
+
+    if (event.error === "not-allowed") {
+      status.textContent =
+        "Microphone permission was not allowed.";
+    } else if (event.error === "no-speech") {
+      status.textContent =
+        "I did not hear anything. Please try again.";
+    } else {
+      status.textContent =
+        "Voice recognition could not understand you.";
+    }
+  };
+
+  recognition.onend = () => {
+    micButton.disabled = false;
+    micButton.textContent = "🎤 Speak";
+  };
+
+  recognition.start();
+},
+
+initialize() {
+  const input = $("aiCalendarCommand");
+  const button = $("aiCalendarCreateBtn");
+  const micButton = $("aiCalendarMicBtn");
+
+  if (!input || !button) return;
+
+  if (micButton) {
+    micButton.addEventListener("click", () => {
+      this.startListening();
     });
   }
-};
 
+  button.addEventListener("click", () => {
+    this.createEvent();
+  });
+
+  input.addEventListener("keydown", event => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      this.createEvent();
+    }
+  });
+}
+};
 AICalendar.initialize();
