@@ -1,0 +1,614 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#173B57">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="styles.css">
+<title>Family Budget</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+
+<script>
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+
+OneSignalDeferred.push(async function (OneSignal) {
+    await OneSignal.init({
+      appId: "09697214-72ac-4b99-85a2-9437b51ed709"
+    });
+  });
+</script>
+</head>
+<body>
+<header class="topbar">
+  <div>
+    <small>SHARED FAMILY FINANCES</small>
+    <h1>Family Budget</h1>
+  </div>
+  <div class="top-actions">
+    <button id="themeToggle" class="icon-button" aria-label="Toggle dark mode">☾</button>
+    <button id="logout" class="secondary hidden">Log out</button>
+  </div>
+</header>
+
+<main>
+<section id="setupScreen" class="screen">
+  <div class="panel narrow">
+    <div class="brand-mark">▰</div>
+    <h2>Connect your app</h2>
+    <p>Enter your Supabase project URL and publishable key. These stay on this device.</p>
+    <label>Project URL<input id="supabaseUrl" placeholder="https://xxxxx.supabase.co"></label>
+    <label>Publishable key<input id="supabaseKey" placeholder="sb_publishable_..."></label>
+    <button id="saveConfig">Save connection</button>
+  </div>
+</section>
+
+<section id="authScreen" class="screen hidden">
+  <div class="panel narrow">
+    <div class="brand-mark">▰</div>
+    <h2 id="authTitle">Sign in</h2>
+    <label>Email<input id="email" type="email" autocomplete="email"></label>
+    <label>Password<input id="password" type="password" minlength="6" autocomplete="current-password"></label>
+    <button id="authSubmit">Sign in</button>
+    <button id="authSwitch" class="secondary">Create an account</button>
+    <p id="authMessage" class="message"></p>
+  </div>
+</section>
+
+<section id="householdScreen" class="screen hidden">
+  <div class="panel narrow">
+    <h2>Set up your household</h2>
+    <p>Create a household on the first device, or join an existing one with the family code.</p>
+    <label>Household name<input id="householdName" value="Johnson Family"></label>
+    <button id="createHousehold">Create household</button>
+    <div class="divider"><span>or</span></div>
+    <label>Family code<input id="joinCode" maxlength="6" placeholder="ABC123"></label>
+    <button id="joinHousehold" class="secondary">Join household</button>
+    <p id="householdMessage" class="message"></p>
+  </div>
+</section>
+
+<section id="appScreen" class="screen hidden">
+  <div class="toolbar">
+    <div>
+      <span class="eyebrow">Viewing month</span>
+      <input id="monthPicker" type="month">
+    </div>
+    <button id="quickAdd" class="quick-add">+ Add purchase</button>
+  </div>
+
+  <div id="homePage" class="page active">
+    <section class="hero">
+      <div>
+        <span>Planned money left</span>
+        <strong id="remaining">$0.00</strong>
+        <small id="syncStatus">Connecting…</small>
+      </div>
+      <div class="hero-side">
+        <span>After logged spending</span>
+        <strong id="afterSpending">$0.00</strong>
+      </div>
+    </section>
+
+    <section class="metrics">
+      <div class="card metric"><span>Monthly income</span><strong id="income">$0.00</strong></div>
+      <div class="card metric"><span>Planned expenses</span><strong id="expenses">$0.00</strong></div>
+      <div class="card metric"><span>Logged spending</span><strong id="logged">$0.00</strong></div>
+      <div class="card metric"><span>Planned savings rate</span><strong id="rate">0%</strong></div>
+    </section>
+
+    <section class="dashboard-grid">
+      <div class="panel">
+        <div class="section-title"><div><span class="eyebrow">This month</span><h2>Spending by category</h2></div></div>
+        <div id="categoryProgress"></div>
+      </div>
+
+      <div class="panel">
+        <div class="section-title"><div><span class="eyebrow">Household</span><h2>Family access</h2></div></div>
+        <div class="family-info">
+          <div><span>Name</span><strong id="householdDisplay"></strong></div>
+          <div><span>Family code</span><strong id="codeDisplay" class="code"></strong></div>
+        </div>
+        <button id="copyCode" class="secondary full">Copy family code</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="section-title">
+        <div><span class="eyebrow">Latest activity</span><h2>Recent spending</h2></div>
+        <button class="text-button" data-go="spendingPage">View all</button>
+      </div>
+      <div id="recentTransactions"></div>
+    </section>
+  </div>
+
+  <div id="budgetPage" class="page">
+    <div class="titleRow">
+      <div><span class="eyebrow">Plan</span><h2>Monthly budget</h2></div>
+      <button id="addBudget">+ Add item</button>
+    </div>
+    <div class="filter-row">
+      <select id="budgetTypeFilter">
+        <option value="All">All items</option>
+        <option value="Income">Income</option>
+        <option value="Expense">Expenses</option>
+      </select>
+      <input id="budgetSearch" type="search" placeholder="Search budget">
+    </div>
+    <div id="budgetSummary" class="summary-strip"></div>
+    <div id="budgetList"></div>
+  </div>
+
+  <div id="spendingPage" class="page">
+    <div class="titleRow">
+      <div><span class="eyebrow">Track</span><h2>Spending log</h2></div>
+      <button id="addSpending">+ Purchase</button>
+    </div>
+    <div class="filter-row">
+      <select id="spendingCategoryFilter"><option value="All">All categories</option></select>
+      <input id="spendingSearch" type="search" placeholder="Search purchases">
+    </div>
+    <div id="spendingTotal" class="summary-strip"></div>
+    <div id="spendingList"></div>
+  </div>
+
+  <div id="reportsPage" class="page">
+    <div class="titleRow"><div><span class="eyebrow">Review</span><h2>Monthly report</h2></div></div>
+    <div class="metrics report-metrics">
+      <div class="card metric"><span>Budgeted expenses</span><strong id="reportBudget">$0.00</strong></div>
+      <div class="card metric"><span>Actual spending</span><strong id="reportActual">$0.00</strong></div>
+      <div class="card metric"><span>Difference</span><strong id="reportDifference">$0.00</strong></div>
+      <div class="card metric"><span>Transactions</span><strong id="reportCount">0</strong></div>
+    </div>
+    <div class="panel">
+      <div class="section-title"><div><span class="eyebrow">Breakdown</span><h2>Category totals</h2></div></div>
+      <div id="reportCategories"></div>
+    </div>
+    <button id="exportCsv" class="full">Export this month to CSV</button>
+  </div>
+
+ <!-- ======================================================
+     FAMILY PLANNER PAGE
+     ====================================================== -->
+
+<div id="calendarPage" class="page">
+
+  <div class="titleRow">
+    <div>
+      <span class="eyebrow">Family</span>
+      <h2>Family Planner</h2>
+      <p class="muted">Meals, reminders, practices, birthdays, bills, and family events.</p>
+    </div>
+
+    <button id="plannerAddEventBtn" type="button">
+      + Add Event
+    </button>
+  </div>
+
+  <!-- Calendar controls -->
+  <section class="panel calendarPage">
+
+    <div class="calendarHeader">
+      <button
+        id="prevMonth"
+        type="button"
+        class="secondary"
+        aria-label="Previous month"
+      >
+        ‹
+      </button>
+
+      <div class="calendarMonthTitle">
+        <h3 id="monthYear">Month Year</h3>
+
+        <button
+          id="todayCalendarBtn"
+          type="button"
+          class="text-button"
+        >
+          Today
+        </button>
+      </div>
+
+      <button
+        id="nextMonth"
+        type="button"
+        class="secondary"
+        aria-label="Next month"
+      >
+        ›
+      </button>
+    </div>
+
+    <!-- Optional event filters -->
+    <div id="calendarFilters" class="plannerFilters">
+      <button
+        type="button"
+        class="plannerFilter active"
+        data-event-filter="all"
+      >
+        All
+      </button>
+
+      <button
+        type="button"
+        class="plannerFilter"
+        data-event-filter="meal"
+      >
+        🍽️ Meals
+      </button>
+
+      <button
+        type="button"
+        class="plannerFilter"
+        data-event-filter="thaw"
+      >
+        🥩 Thaw
+      </button>
+
+      <button
+        type="button"
+        class="plannerFilter"
+        data-event-filter="grocery"
+      >
+        🛒 Grocery
+      </button>
+
+      <button
+        type="button"
+        class="plannerFilter"
+        data-event-filter="practice"
+      >
+        🏈 Practice
+      </button>
+
+      <button
+        type="button"
+        class="plannerFilter"
+        data-event-filter="birthday"
+      >
+        🎂 Birthdays
+      </button>
+
+      <button
+        type="button"
+        class="plannerFilter"
+        data-event-filter="bill"
+      >
+        💰 Bills
+      </button>
+
+      <button
+        type="button"
+        class="plannerFilter"
+        data-event-filter="custom"
+      >
+        📅 Other
+      </button>
+    </div>
+
+    <!-- JavaScript creates weekdays and day boxes here -->
+    <div id="calendarGrid"></div>
+
+  </section>
+
+  <!-- Upcoming events -->
+  <section class="panel">
+
+    <div class="section-title">
+      <div>
+        <span class="eyebrow">Coming Up</span>
+        <h2>Upcoming Events</h2>
+      </div>
+    </div>
+
+    <div id="calendarEvents">
+      <p class="empty">Loading events...</p>
+    </div>
+
+  </section>
+
+</div>
+  <div id="morePage" class="page">
+ <div class="panel notificationSettingsPanel">
+
+  <div class="section-title">
+    <div>
+      <span class="eyebrow">Reminders</span>
+      <h2>Notifications</h2>
+    </div>
+
+    <span
+      id="notificationStatusBadge"
+      class="notificationStatusBadge"
+    >
+      Checking...
+    </span>
+  </div>
+
+  <p id="notificationStatusMessage" class="muted">
+    Checking notification availability on this device.
+  </p>
+
+  <div class="notificationActions">
+
+    <button
+      id="enableNotificationsBtn"
+      type="button"
+    >
+      Enable Notifications
+    </button>
+
+    <button
+      id="testNotificationBtn"
+      type="button"
+      class="secondary"
+    >
+      Send Test Notification
+    </button>
+
+  </div>
+
+  <p class="notificationHelp muted">
+    Notifications must be enabled separately on each family member’s phone.
+  </p>
+
+</div>   
+    <div class="panel">
+      <h2>Install on your phone</h2>
+      <p><strong>iPhone:</strong> open this site in Safari, tap Share, then Add to Home Screen.</p>
+      <p><strong>Android:</strong> open in Chrome, open the menu, then tap Install app or Add to Home screen.</p>
+    </div>
+    <div class="panel">
+      <h2>Account</h2>
+      <p id="accountEmail" class="muted"></p>
+      <button id="clearConfig" class="danger">Clear Supabase connection</button>
+    </div>
+  </div>
+</section>
+</main>
+
+<nav id="nav" class="hidden">
+  <button data-page="homePage" class="active"><span>⌂</span>Home</button>
+  <button data-page="budgetPage"><span>▤</span>Budget</button>
+  <button data-page="spendingPage"><span>＋</span>Spending</button>
+  <button data-page="reportsPage"><span>▥</span>Reports</button>
+  <button data-page="calendarPage"><span>▦</span>Calendar</button>
+  <button data-page="morePage"><span>•••</span>More</button>
+</nav>
+
+<dialog id="budgetDialog">
+<form id="budgetForm">
+  <div class="dialog-head"><h3 id="budgetDialogTitle">Add budget item</h3><button type="button" class="close-button" data-close="budgetDialog">×</button></div>
+  <input id="budgetId" type="hidden">
+  <label>Name<input id="budgetName" required></label>
+  <label>Category<select id="budgetCategory"></select></label>
+  <label>Monthly amount<input id="budgetAmount" type="number" min="0" step=".01" required></label>
+  <label>Type<select id="budgetType"><option>Expense</option><option>Income</option></select></label>
+  <label class="check"><input id="budgetActive" type="checkbox" checked> Active in monthly plan</label>
+  <div class="actions"><button type="button" class="secondary" data-close="budgetDialog">Cancel</button><button>Save</button></div>
+</form>
+</dialog>
+
+<dialog id="spendingDialog">
+<form id="spendingForm">
+  <div class="dialog-head"><h3 id="spendingDialogTitle">Add purchase</h3><button type="button" class="close-button" data-close="spendingDialog">×</button></div>
+  <input id="spendingId" type="hidden">
+  <label>Date<input id="spendingDate" type="date" required></label>
+  <label>Description<input id="spendingName" required></label>
+  <label>Category<select id="spendingCategory"></select></label>
+  <label>Amount<input id="spendingAmount" type="number" min="0" step=".01" required></label>
+  <div class="actions"><button type="button" class="secondary" data-close="spendingDialog">Cancel</button><button>Save</button></div>
+</form>
+</dialog>
+
+<div id="toast" class="toast hidden"></div>
+
+<!-- ======================================================
+     SELECTED DAY WINDOW
+====================================================== -->
+
+<div id="dayModal" class="modal hidden">
+
+  <div class="modalContent plannerDayModal">
+
+    <div class="dialog-head">
+
+      <div>
+        <span class="eyebrow">Family Planner</span>
+        <h2 id="selectedDayTitle">Selected Day</h2>
+      </div>
+
+      <button
+        id="closeModalBtn"
+        type="button"
+        class="close-button"
+      >
+        ×
+      </button>
+
+    </div>
+
+    <div id="selectedDayEvents">
+      <p class="empty">No events scheduled.</p>
+    </div>
+
+    <div class="plannerDayActions">
+
+      <button id="addMealBtn">
+        🍽️ Add Meal
+      </button>
+
+      <button id="addThawBtn">
+        🥩 Lay Meat Out
+      </button>
+
+      <button id="addGroceriesBtn">
+        🛒 Grocery Reminder
+      </button>
+
+      <button id="addPracticeBtn">
+        🏈 Practice
+      </button>
+
+      <button id="addBirthdayBtn">
+        🎂 Birthday
+      </button>
+
+      <button id="addBillBtn">
+        💰 Bill Reminder
+      </button>
+
+      <button id="addCustomBtn">
+        📅 Custom Event
+      </button>
+
+    </div>
+
+    <button
+      id="closeDayModalBottomBtn"
+      class="secondary"
+      type="button"
+    >
+      Close
+    </button>
+
+  </div>
+
+</div>
+
+<!-- ======================================================
+     ADD / EDIT EVENT WINDOW
+====================================================== -->
+
+<div id="plannerEventModal" class="modal hidden">
+
+  <div class="modalContent">
+
+    <h2 id="plannerFormTitle">
+      Add Event
+    </h2>
+
+    <form id="plannerEventForm">
+
+      <input
+        id="plannerEventId"
+        type="hidden"
+      >
+
+      <label>
+
+        Event Type
+
+        <select id="plannerEventType">
+
+          <option value="meal">🍽️ Meal</option>
+          <option value="thaw">🥩 Lay Meat Out</option>
+          <option value="grocery">🛒 Grocery Reminder</option>
+          <option value="practice">🏈 Practice</option>
+          <option value="birthday">🎂 Birthday</option>
+          <option value="bill">💰 Bill Reminder</option>
+          <option value="appointment">🩺 Appointment</option>
+          <option value="school">🎓 School</option>
+          <option value="custom">📅 Custom Event</option>
+
+        </select>
+
+      </label>
+
+      <label>
+
+        Title
+
+        <input
+          id="plannerEventTitle"
+          type="text"
+          placeholder="Event title"
+          required
+        >
+
+      </label>
+
+      <label>
+
+        Date
+
+        <input
+          id="plannerEventDate"
+          type="date"
+          required
+        >
+
+      </label>
+
+      <label>
+
+        Time
+
+        <input
+          id="plannerEventTime"
+          type="time"
+        >
+
+      </label>
+
+<label>
+
+    Reminder
+
+    <select id="plannerEventReminder">
+
+        <option value="">No reminder</option>
+        <option value="0">At event time</option>
+        <option value="15">15 minutes before</option>
+        <option value="30">30 minutes before</option>
+        <option value="60">1 hour before</option>
+        <option value="120">2 hours before</option>
+        <option value="1440">1 day before</option>
+
+    </select>
+
+</label>
+
+<label>
+
+    Notes
+
+    <textarea
+        id="plannerEventNotes"
+        rows="4"
+        placeholder="Optional notes..."
+    ></textarea>
+
+</label>
+
+      <div class="actions">
+
+        <button
+          id="cancelPlannerEventBtn"
+          type="button"
+          class="secondary"
+        >
+          Cancel
+        </button>
+
+        <button
+          id="savePlannerEventBtn"
+          type="submit"
+        >
+          Save Event
+        </button>
+
+      </div>
+
+    </form>
+
+  </div>
+
+</div>
+<script src="app.js"></script>
+</body>
+</html>
