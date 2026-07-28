@@ -18,7 +18,13 @@ const activeItems = () => items.filter(x => x.active !== false);
 function toast(msg) { $("toast").textContent = msg; $("toast").classList.remove("hidden"); clearTimeout(window.toastTimer); window.toastTimer = setTimeout(() => $("toast").classList.add("hidden"), 2200) }
 function show(id) { ["setupScreen", "authScreen", "householdScreen", "appScreen"].forEach(x => $(x).classList.toggle("hidden", x !== id)); $("nav").classList.toggle("hidden", id !== "appScreen"); $("logout").classList.toggle("hidden", id !== "appScreen" && id !== "householdScreen") }
 function initTheme() { const t = localStorage.getItem("budget_theme") || "light"; document.documentElement.dataset.theme = t; $("themeToggle").textContent = t === "dark" ? "☀" : "☾" }
-function initClient() { const u = localStorage.getItem("sb_url"), k = localStorage.getItem("sb_key"); if (!u || !k) { show("setupScreen"); return false } sb = supabase.createClient(u, k); return true }
+function initClient() {
+  const url = "https://xwjuheuyrfjcqkijmbwh.supabase.co";
+const key = "sb_publishable_zKvHocurFlYFMF_0myncvw_MVgnr8vE";
+
+  sb = supabase.createClient(url, key);
+  return true;
+}
 $("themeToggle").onclick = () => { const t = document.documentElement.dataset.theme === "dark" ? "light" : "dark"; document.documentElement.dataset.theme = t; localStorage.setItem("budget_theme", t); $("themeToggle").textContent = t === "dark" ? "☀" : "☾" }
 $("saveConfig").onclick = (event) => {
   event.preventDefault();
