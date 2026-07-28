@@ -1,3 +1,4 @@
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 export async function handler(event) {
   if (event.httpMethod !== "POST") {
     return {
