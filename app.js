@@ -1009,36 +1009,9 @@ const startDate = localStartDate.toISOString();
   },
 
 
-  recognition.onresult = event => {
-    const spokenText =
-      event.results[0][0].transcript.trim();
+ 
 
-    input.value = spokenText;
-    status.textContent = `Heard: ${spokenText}`;
-  };
 
-  recognition.onerror = event => {
-    console.error("Speech recognition error:", event.error);
-
-    if (event.error === "not-allowed") {
-      status.textContent =
-        "Microphone permission was not allowed.";
-    } else if (event.error === "no-speech") {
-      status.textContent =
-        "I did not hear anything. Please try again.";
-    } else {
-      status.textContent =
-        "Voice recognition could not understand you.";
-    }
-  };
-
-  recognition.onend = () => {
-    micButton.disabled = false;
-    micButton.textContent = "🎤 Speak";
-  };
-
-  recognition.start();
-},
   initialize() {
     this.bindControls();
     this.renderCalendar();
