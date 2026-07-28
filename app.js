@@ -1854,7 +1854,7 @@ const micButton = $("aiCalendarMicBtn");
   initialize() {
     const input = $("aiCalendarCommand");
     const button = $("aiCalendarCreateBtn");
-
+const micButton = $("aiCalendarMicBtn");
     if (!input || !button) return;
 if (micButton) {
   micButton.addEventListener("click", () => {
