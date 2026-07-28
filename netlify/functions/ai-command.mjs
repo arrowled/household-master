@@ -1,11 +1,9 @@
 export async function handler(event) {
-  // Only allow POST requests
   if (event.httpMethod !== "POST") {
     return {
       statusCode: 405,
       body: JSON.stringify({
-        success: false,
-        message: "Method Not Allowed"
+        error: "Method Not Allowed"
       })
     };
   }
@@ -13,9 +11,8 @@ export async function handler(event) {
   try {
     const body = JSON.parse(event.body || "{}");
 
-    console.log("AI Command Received:", body);
+    console.log("AI Command:", body);
 
-    // Version 1 - just echo the command back
     return {
       statusCode: 200,
       headers: {
@@ -23,20 +20,18 @@ export async function handler(event) {
       },
       body: JSON.stringify({
         success: true,
-        message: "AI command received successfully.",
-        command: body
+        received: body
       })
     };
 
   } catch (err) {
-
     console.error(err);
 
     return {
       statusCode: 500,
       body: JSON.stringify({
         success: false,
-        message: err.message
+        error: err.message
       })
     };
   }
