@@ -1648,3 +1648,169 @@ document.addEventListener(
     NotificationManager.initialize();
   }
 );
+// ============================================================
+// AI CALENDAR EVENT CREATOR
+// ============================================================
+
+const AICalendar = {
+  async createEvent() {
+    const input = $("aiCalendarCommand");
+    const button = $("aiCalendarCreateBtn");
+    const status = $("aiCalendarStatus");
+
+    const command = input.value.trim();
+
+    if (!command) {
+      status.textContent = "Enter a calendar command.";
+      input.focus();
+      return;
+    }
+
+    if (!sb || !household || !user) {
+      status.textContent = "The household connection is not ready.";
+      return;
+    }
+
+    button.disabled = true;
+    button.textContent = "Creating...";
+    status.textContent = "Understanding your request...";
+
+    try {
+      const response = await fetch(
+        "/.netlify/functions/ai-command",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            command,
+            currentDate: Planner.toDateString(new Date())
+          })
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success || !result.event) {
+        throw new Error(
+          result.error || "The AI could not create the event."
+        );
+      }
+
+      const aiEvent = result.event;
+
+      const title = String(aiEvent.title || "").trim();
+      const eventType = Planner.eventTypes[aiEvent.event_type]
+        ? aiEvent.event_type
+        : "custom";
+      const date = String(aiEvent.date || "").slice(0, 10);
+      const time = aiEvent.time
+        ? String(aiEvent.time).slice(0, 5)
+        : "";
+
+      if (!title || !date) {
+        throw new Error(
+          "The AI response did not include a valid title and date."
+        );
+      }
+
+      const allDay = Boolean(aiEvent.all_day || !time);
+
+      const localStartDate = new Date(
+        allDay
+          ? `${date}T12:00:00`
+          : `${date}T${time}:00`
+      );
+
+      if (Number.isNaN(localStartDate.getTime())) {
+        throw new Error("The AI returned an invalid date or time.");
+      }
+
+      const reminderMinutes =
+        aiEvent.reminder_minutes === null ||
+        aiEvent.reminder_minutes === undefined
+          ? null
+          : Number(aiEvent.reminder_minutes);
+
+      const row = {
+        household_id: household.id,
+        title,
+        event_type: eventType,
+        start_date: localStartDate.toISOString(),
+        all_day: allDay,
+        notes: String(aiEvent.notes || "").trim(),
+        reminder_minutes: Number.isFinite(reminderMinutes)
+          ? reminderMinutes
+          : null,
+        notification_enabled:
+          Number.isFinite(reminderMinutes),
+        notification_sent: false,
+        created_by: user.id
+      };
+
+      let insertResult = await sb
+        .from("calendar_events")
+        .insert(row);
+
+      if (
+        insertResult.error &&
+        String(insertResult.error.message)
+          .toLowerCase()
+          .includes("created_by")
+      ) {
+        const fallbackRow = { ...row };
+        delete fallbackRow.created_by;
+
+        insertResult = await sb
+          .from("calendar_events")
+          .insert(fallbackRow);
+      }
+
+      if (insertResult.error) {
+        throw insertResult.error;
+      }
+
+      const eventDate = new Date(`${date}T12:00:00`);
+
+      Planner.currentMonth = eventDate.getMonth();
+      Planner.currentYear = eventDate.getFullYear();
+      Planner.selectedDate = date;
+
+      await Planner.loadEvents();
+
+      input.value = "";
+      status.textContent = `Created: ${title}`;
+      toast("Calendar event created");
+
+    } catch (error) {
+      console.error("AI calendar creation failed:", error);
+
+      status.textContent =
+        error.message || "The event could not be created.";
+    } finally {
+      button.disabled = false;
+      button.textContent = "✨ Create";
+    }
+  },
+
+  initialize() {
+    const input = $("aiCalendarCommand");
+    const button = $("aiCalendarCreateBtn");
+
+    if (!input || !button) return;
+
+    button.addEventListener("click", () => {
+      this.createEvent();
+    });
+
+    input.addEventListener("keydown", event => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        this.createEvent();
+      }
+    });
+  }
+};
+
+AICalendar.initialize();

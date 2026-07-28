@@ -175,7 +175,31 @@ OneSignalDeferred.push(async function (OneSignal) {
      ====================================================== -->
 
 <div id="calendarPage" class="page">
+<section class="panel">
+  <div class="section-title">
+    <div>
+      <span class="eyebrow">Household AI</span>
+      <h2>Create an Event</h2>
+    </div>
+  </div>
 
+  <div class="filter-row">
+    <input
+      id="aiCalendarCommand"
+      type="text"
+      placeholder="Football practice Thursday at 6 PM"
+    >
+
+    <button
+      id="aiCalendarCreateBtn"
+      type="button"
+    >
+      ✨ Create
+    </button>
+  </div>
+
+  <p id="aiCalendarStatus" class="muted"></p>
+</section>
   <div class="titleRow">
     <div>
       <span class="eyebrow">Family</span>
