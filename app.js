@@ -1825,13 +1825,18 @@ startListening() {
     status.textContent = "Speak your calendar command.";
   };
 
-  recognition.onresult = event => {
-    const spokenText =
-      event.results[0][0].transcript.trim();
+ recognition.onresult = event => {
+  const spokenText =
+    event.results[0][0].transcript.trim();
 
-    input.value = spokenText;
-    status.textContent = `Heard: ${spokenText}`;
-  };
+  input.value = spokenText;
+  status.textContent = `Heard: ${spokenText}`;
+
+  // Automatically create the event
+  setTimeout(() => {
+    this.createEvent();
+  }, 500);
+};
 
   recognition.onerror = event => {
     console.error(
