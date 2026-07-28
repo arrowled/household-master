@@ -10,7 +10,9 @@ export async function handler(event) {
 
   try {
     const body = JSON.parse(event.body || "{}");
+const command = body.command || "";
 
+console.log("Command:", command);
     console.log("AI Command:", body);
 
     return {
@@ -18,10 +20,12 @@ export async function handler(event) {
       headers: {
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({
-        success: true,
-        received: body
-      })
+     body: JSON.stringify({
+  success: true,
+  command,
+  action: command ? "calendar_event" : "unknown",
+  received: body
+})
     };
 
   } catch (err) {
