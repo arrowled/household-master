@@ -120,10 +120,15 @@ meal, thaw, grocery, practice, birthday, bill,
 appointment, school, custom, family.
               `.trim()
             },
-            {
-              role: "user",
-              content: command
-            }
+{
+  role: "user",
+  content:
+`Current local date/time: ${currentDateTime}
+Timezone: ${timezone}
+
+Calendar request:
+${command}`
+}
           ],
 
           text: {
