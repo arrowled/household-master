@@ -64,10 +64,15 @@ export async function handler(event) {
       });
     }
 
-    const localDate = body.currentDate || getLocalDate();
+ const currentDateTime =
+  body.currentDateTime || new Date().toISOString();
+
+const timezone =
+  body.timezone || "America/Chicago"; 
 
     console.log("AI calendar command:", command);
-    console.log("Calendar reference date:", localDate);
+  console.log("Calendar reference time:", currentDateTime);
+console.log("Calendar timezone:", timezone);
 
     const openAIResponse = await fetch(
       "https://api.openai.com/v1/responses",
@@ -86,8 +91,9 @@ export async function handler(event) {
               content: `
 You convert household calendar commands into structured calendar events.
 
-The user's local timezone is America/Chicago.
-Today's local date is ${localDate}.
+The user's local timezone is ${timezone}.
+The current local date and time reference is ${currentDateTime}.
+Use this exact reference when interpreting phrases like "in 10 minutes" or "5 minutes from now."
 
 Interpret relative dates such as:
 - today

@@ -1688,10 +1688,11 @@ const micButton = $("aiCalendarMicBtn");
           headers: {
             "Content-Type": "application/json"
           },
-          body: JSON.stringify({
-            command,
-            currentDate: Planner.toDateString(new Date())
-          })
+body: JSON.stringify({
+  command,
+  currentDateTime: new Date().toISOString(),
+  timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+})
         }
       );
 
